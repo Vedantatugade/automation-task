@@ -15,9 +15,7 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                sh '''
-                terraform init
-                '''
+                bat 'terraform init'
             }
         }
 
@@ -28,38 +26,30 @@ pipeline {
                     usernameVariable: 'AWS_ACCESS_KEY_ID',
                     passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                 )]) {
-                    sh '''
-                    export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                    export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-                    terraform apply -auto-approve
-                    '''
+                    bat 'terraform apply -auto-approve'
                 }
             }
         }
 
         stage('Get EC2 IP') {
             steps {
-                sh '''
-                terraform output -raw ec2_ip > ip.txt
-                '''
+                bat 'terraform output -raw ec2_ip > ip.txt'
             }
         }
 
         stage('Create Inventory') {
             steps {
-                sh '''
-                echo "[web]" > inventory.ini
-                IP=$(cat ip.txt)
-                echo "$IP ansible_user=ec2-user ansible_ssh_private_key_file=small-task.pem" >> inventory.ini
+                bat '''
+                echo [web] > inventory.ini
+                set /p IP=<ip.txt
+                echo %IP% ansible_user=ec2-user ansible_ssh_private_key_file=small-task.pem >> inventory.ini
                 '''
             }
         }
 
         stage('Run Ansible Playbook') {
             steps {
-                sh '''
-                ansible-playbook -i inventory.ini nginx.yaml
-                '''
+                bat 'ansible-playbook -i inventory.ini nginx.yaml'
             }
         }
 
@@ -67,10 +57,10 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline executed successfully!"
+            echo 'Pipeline executed successfully!'
         }
         failure {
-            echo "Pipeline failed. Check logs."
+            echo 'Pipeline failed. Check logs.'
         }
     }
 }
