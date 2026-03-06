@@ -1,11 +1,23 @@
 pipeline {
     agent any
 
+    environment {
+        AWS_DEFAULT_REGION = 'ap-south-1'
+    }
+
     stages {
+
+        stage('Checkout Code') {
+            steps {
+                checkout scm
+            }
+        }
 
         stage('Terraform Init') {
             steps {
-                sh 'terraform init'
+                sh '''
+                terraform init
+                '''
             }
         }
 
@@ -16,14 +28,20 @@ pipeline {
                     usernameVariable: 'AWS_ACCESS_KEY_ID',
                     passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                 )]) {
-                    sh 'terraform apply -auto-approve'
+                    sh '''
+                    export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+                    export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+                    terraform apply -auto-approve
+                    '''
                 }
             }
         }
 
         stage('Get EC2 IP') {
             steps {
-                sh 'terraform output -raw ec2_ip > ip.txt'
+                sh '''
+                terraform output -raw ec2_ip > ip.txt
+                '''
             }
         }
 
@@ -39,9 +57,20 @@ pipeline {
 
         stage('Run Ansible Playbook') {
             steps {
-                sh 'ansible-playbook -i inventory.ini nginx.yaml'
+                sh '''
+                ansible-playbook -i inventory.ini nginx.yaml
+                '''
             }
         }
 
+    }
+
+    post {
+        success {
+            echo "Pipeline executed successfully!"
+        }
+        failure {
+            echo "Pipeline failed. Check logs."
+        }
     }
 }
