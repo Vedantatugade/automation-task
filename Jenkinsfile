@@ -19,6 +19,18 @@ pipeline {
             }
         }
 
+        stage('Terraform Plan') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'aws-credentials-1',
+                    usernameVariable: 'AWS_ACCESS_KEY_ID',
+                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                )]) {
+                    bat 'terraform plan'
+                }
+            }
+        }
+
         stage('Terraform Apply') {
             steps {
                 withCredentials([usernamePassword(
@@ -37,27 +49,11 @@ pipeline {
             }
         }
 
-        stage('Create Inventory') {
-            steps {
-                bat '''
-                echo [web] > inventory.ini
-                set /p IP=<ip.txt
-                echo %IP% ansible_user=ec2-user ansible_ssh_private_key_file=small-task.pem >> inventory.ini
-                '''
-            }
-        }
-
-        stage('Run Ansible Playbook') {
-            steps {
-                bat 'ansible-playbook -i inventory.ini nginx.yaml'
-            }
-        }
-
     }
 
     post {
         success {
-            echo 'Pipeline executed successfully!'
+            echo 'Terraform infrastructure deployed successfully!'
         }
         failure {
             echo 'Pipeline failed. Check logs.'
